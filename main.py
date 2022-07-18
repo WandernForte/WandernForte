@@ -1,11 +1,15 @@
 from typing import Any
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch import device
 from torchvision import datasets, transforms
+
+import d2lzh_pytorch
+from mlp.utils import xyplot
 
 
 class Net(nn.Module):
@@ -28,4 +32,19 @@ class Net(nn.Module):
 
 
 model = Net().to("cpu")
+batch_size = 256
+train_iter, test_iter = d2lzh_pytorch.load_data_fashion_mnist(batch_size)
+x = torch.arange(-8.0, 8.0, 0.1, requires_grad=True)
+y = x.relu()
+xyplot(x, y, 'relu')
+num_inputs, num_outputs, num_hiddens = 784, 10, 256
+W1 = torch.tensor(np.random.normal(0, 0.01, (num_inputs, num_hiddens)), dtype=torch.float)
+b1 = torch.zeros(num_hiddens, dtype=torch.float)
+W2 = torch.tensor(np.random.normal(0, 0.01, (num_hiddens, num_outputs)), dtype=torch.float)
+b2 = torch.zeros(num_outputs, dtype=torch.float)
+
+params = [W1, b1, W2, b2]
+
+for param in params:
+    param.requires_grad_(requires_grad=True)
 
