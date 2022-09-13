@@ -9789,8 +9789,8 @@ pipewrite(struct pipe *pi, uint64 addr, int n)//write bytes via pipe
     80004946:	84aa                	mv	s1,a0
     80004948:	8b2e                	mv	s6,a1
     8000494a:	8ab2                	mv	s5,a2
-   * @param addr unclear, process status maybe?
-   * @param n  unclear
+   * @param addr unclear, start addr of void* ?
+   * @param n  length of void*
    */
   int i;
   char ch;

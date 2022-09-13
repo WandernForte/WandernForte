@@ -79,8 +79,8 @@ pipewrite(struct pipe *pi, uint64 addr, int n)//write bytes via pipe
   /**
    * @brief 
    * @param pi pipe for write
-   * @param addr unclear, process status maybe?
-   * @param n  unclear
+   * @param addr unclear, start addr of void* ?
+   * @param n  length of void*
    */
   int i;
   char ch;
