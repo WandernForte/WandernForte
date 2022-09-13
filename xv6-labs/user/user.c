@@ -14,7 +14,6 @@ int pipe(int* ports){
  * ports[0] denotes output, ports[1] denotes input 
  * 
  */ 
-
     int len_ports = sizeof(ports)/sizeof(ports[0]);//get length of input arr
     if (len_ports!=2) return -1;
     PIPE->nread=0;
