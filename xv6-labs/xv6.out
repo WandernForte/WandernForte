@@ -1,3 +1,4 @@
+*** Now run 'gdb' in another window.
 
 xv6 kernel is booting
 
@@ -5,4 +6,8 @@ hart 1 starting
 hart 2 starting
 init: starting sh
 $ pingpong
-qemu-system-riscv64: terminating on signal 2
+0: received ping
+ping3: received 
+$ echo OK
+OK
+$ qemu-system-riscv64: terminating on signal 15 from pid 19504 (make)

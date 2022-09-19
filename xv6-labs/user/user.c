@@ -5,6 +5,3 @@ int sleep(int ticks){
     }
     exit(ticks);
 }
-
-//pipe utils
-int 
