@@ -19,8 +19,8 @@ fmtname(char *path)
    a:	e44e                	sd	s3,8(sp)
    c:	1800                	addi	s0,sp,48
    e:	84aa                	mv	s1,a0
-  static char buf[DIRSIZ+1];
-  char *p;
+  static char buf[DIRSIZ+1];//buffer
+  char *p;//string
 
   // Find first character after last slash.
   for(p=path+strlen(path); p >= path && *p != '/'; p--)
