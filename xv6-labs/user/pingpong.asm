@@ -54,6 +54,7 @@ int main(int argc,char* argv[]){
   6a:	fdc42503          	lw	a0,-36(s0)
   6e:	00000097          	auipc	ra,0x0
   72:	314080e7          	jalr	788(ra) # 382 <write>
+        // write(p[1], "pong", 4);
         // close(p[1]);
         exit(0);
   76:	4501                	li	a0,0

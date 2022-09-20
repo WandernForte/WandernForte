@@ -13,6 +13,7 @@ int main(int argc,char* argv[]){
         printf("%d: received %s",pid_c, read_out);
         printf("\n");
         write(p[1], "pong", 4);
+        // write(p[1], "pong", 4);
         // close(p[1]);
         exit(0);
     }else{
