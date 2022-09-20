@@ -1,40 +1,40 @@
 #include"user/user.h"
 #include"kernel/types.h"
 int nums[34]={2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35};
-int main(int argc,char* argv[]){
-    int stat;
-    int p[2];
-    int pid;
-    pipe(p);
-    if((pid=fork())!=0){//父进程
-        
-        write(p[1], nums, sizeof nums);
-        close(p[1]);
-        wait(&stat);
-        
-    }else{//子进程
-        int read_out=-1;
+void primes(int*ports, int max){
+    int prime,read_out;
+    int num2Next[34]={-1};
+    int cnt=0;
+    int len=read(ports[0],&prime,sizeof prime);
+    printf("prime %d\n",prime);
+    if(len <=0||prime==max) exit(0);
     
-        if(!read(p[0],&read_out,sizeof read_out)){//空则直接退出
-        exit(0);
+    while(read(ports[0], &read_out,sizeof read_out)>0){//管道还能读出数据
+        if(read_out%prime!=0){
+            
+            num2Next[cnt] = read_out;
+            cnt++;
         }
-
-        int new_ports[2];
-        int prime=read_out;
-        printf("prime: %d", prime);
-        printf("\n");
-        pipe(new_ports);//第二个管道
-        while(read(p[0], &read_out,sizeof read_out)>0){//管道还能读出数据
+        if(read_out>=max){
+            break;
+        }
+    }
+    write(ports[1], num2Next, cnt*4);
     
-            if(read_out%prime!=0){
-                dup(new_ports[1]);
-                write(new_ports[1], &prime,1);
-                close(new_ports[1]);
-            }
-        }
-        wait(&stat);
+    if(fork() == 0){ //child's turn
+        primes(ports, num2Next[cnt-1]);
         exit(0);
     }
-
+    wait(0);
+    return;
+}
+int main(int argc,char* argv[]){
+    int p[2];
+    pipe(p);
+    write(p[1],nums,sizeof nums);
+    primes(p, 35);
+    
+    close(p[1]);
+    close(p[0]);
     exit(0);
 }
