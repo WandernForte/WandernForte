@@ -72,7 +72,6 @@ find(char*dir, char *path)
         // 
         if(st.type==T_DIR && strcmp(fmtname(buf), ".")!=0&&strcmp(fmtname(buf), "..")!=0){
             find(buf,path);
-            // printf("runned %s!\n", buf);
         }
 
         }

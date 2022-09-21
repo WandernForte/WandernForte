@@ -4,19 +4,11 @@ xv6 kernel is booting
 hart 1 starting
 hart 2 starting
 init: starting sh
-$ mkdir euOOIno6
-$ echo > euOOIno6/NY7Z1gZQ
-$ mkdir euOOIno6/dFfaZLAA
-$ echo > euOOIno6/dFfaZLAA/NY7Z1gZQ
-$ mkdir goQFLPSJ
-$ echo > goQFLPSJ/NY7Z1gZQ
-$ find . NY7Z1gZQ
-./.
-./a/.
-./euOOIno6/.
-./euOOIno6/dFfaZLAA/.
-./goQFLPSJ/.
-./euOOIno6/NY7Z1gZQ
-./euOOIno6/dFfaZLAA/NY7Z1gZQ
-./goQFLPSJ/NY7Z1gZQ
-$ qemu-system-riscv64: terminating on signal 15 from pid 15374 (make)
+$ sh < xargstest.sh
+$ echo DONE
+mkdir: a failed to create
+$ $ mkdir: c failed to create
+$ $ $ hello
+hello
+hello
+$ $ DONEqemu-system-riscv64: terminating on signal 15 from pid 7611 (make)
