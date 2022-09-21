@@ -18,16 +18,14 @@ int main(int argc,char* argv[]){
         // //获取先前命令的输出
         
         for(int i=0;i<pre_buf_size;i++){
-            // printf("pre_buf:%s,p_pre_buf:%s\n", pre_buf, p_pre_buf);
             char cursor = pre_buf[i];//光标
             
             if(cursor == '\n'){//碰到换行符\n, 执行一次pre_buf中的内容
                 pre_buf[line_buf_size] = 0;
-                lat_buf[lat_buf_size++] = p_pre_buf;
+                lat_buf[lat_buf_size++] = p_pre_buf;//这里不能是pre_buf
                 lat_buf[lat_buf_size] = 0;
             if(fork()==0){//child's turn, 子进程执行新的语句
-            // for(int j=0;j<lat_buf_size-1;j++){
-            //     printf("lat_buf:%s\n",lat_buf[j]);}
+
                 exec(argv[1], lat_buf);
                 
             }
@@ -40,14 +38,12 @@ int main(int argc,char* argv[]){
             
             pre_buf[line_buf_size++] = 0;
             
-            lat_buf[lat_buf_size++] = p_pre_buf;
+            lat_buf[lat_buf_size++] = p_pre_buf;//这里不能是pre_buf
             
-            p_pre_buf = pre_buf + line_buf_size;
+            p_pre_buf = pre_buf + line_buf_size;//p_pre_buf = pre_buf[line_buf_size:]
             
         }else{
             pre_buf[line_buf_size++] = cursor;//一般的字符就一直推入缓冲区
-
-
         }
 
 }        
