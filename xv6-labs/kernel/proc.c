@@ -274,7 +274,7 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
-
+  np->mask = p->mask;
   np->parent = p;
 
   // copy saved user registers.
@@ -692,4 +692,11 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+
+int
+trace(int mask){
+  
+  return 0;
 }
