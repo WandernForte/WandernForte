@@ -1,5 +1,3 @@
-#include"kernel/types.h"
-
 struct stat;
 struct rtcdate;
 
@@ -23,9 +21,7 @@ int chdir(const char*);
 int dup(int);
 int getpid(void);
 char* sbrk(int);
-
 int sleep(int);
-
 int uptime(void);
 
 // ulib.c

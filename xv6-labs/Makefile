@@ -149,17 +149,8 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
-	$U/_sleep\
-	$U/_pingpong\
-	$U/_primes\
-	$U/_find\
-	$U/_xargs\
 
-ifeq ($(LAB),syscall)
-UPROGS += \
-	$U/_trace\
-	$U/_sysinfotest
-endif
+
 
 ifeq ($(LAB),trap)
 UPROGS += \
@@ -231,10 +222,12 @@ print-gdbport:
 	@echo $(GDBPORT)
 
 grade:
+	@echo 1000 > time.txt
 	@echo $(MAKE) clean
 	@$(MAKE) clean || \
           (echo "'make clean' failed.  HINT: Do you have another running instance of xv6?" && exit 1)
 	./grade-lab-$(LAB) $(GRADEFLAGS)
+	
 
 ##
 ## FOR web handin
