@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.h"
 
 uint64
 sys_exit(void)
@@ -108,6 +109,11 @@ sys_trace(void)
 }
 uint64
 sys_sysinfo(void){
-  printf("test words\n");
-  return 0;
+
+  struct sysinfo info;
+  // info.freefd=0;
+  // info.freemem=0;
+  // info.nproc=0;
+  return sysinfo(&info);
+
 }

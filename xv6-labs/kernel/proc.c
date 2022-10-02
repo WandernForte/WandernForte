@@ -5,6 +5,8 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "sysinfo.h"
+// #include "kalloc.c"
 
 struct cpu cpus[NCPU];
 
@@ -643,6 +645,8 @@ int trace(int mask){
   return 0;
 }
 
+
+
 // Copy to either a user address, or kernel address,
 // depending on usr_dst.
 // Returns 0 on success, -1 on error.
@@ -702,3 +706,45 @@ procdump(void)
   }
 }
 
+int 
+num_freeproc(){
+  int result=0;
+  struct proc *p;
+
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->state==UNUSED){
+      result++;
+    }
+    release(&p->lock);
+  }
+  return result;
+}
+
+uint64 
+num_free_ofile(){
+  struct proc *p = myproc();
+  int result=0;
+
+  for(int fd = 0; fd < NOFILE; fd++){
+    if(!p->ofile[fd]){
+      result++;
+    }
+  }
+  return result;
+}
+
+int sysinfo(struct sysinfo* info){
+    uint64 addr;
+    if(argaddr(0,&addr)<0)
+    {
+      exit(-1);
+    }
+    struct proc* p = myproc();
+    info->freemem = cal_free_mem();
+    info->freefd = num_free_ofile();
+    info->nproc = num_freeproc();
+    if(copyout(p->pagetable, addr, (char *)info, sizeof(*info)) < 0)
+      return -1;
+    return 0;
+}
