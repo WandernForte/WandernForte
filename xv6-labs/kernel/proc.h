@@ -105,3 +105,4 @@ struct proc {
   char name[16];               // Process name (debugging)
   int mask;                    //Process status(0:off or 1:on)
 };
+

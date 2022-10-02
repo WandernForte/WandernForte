@@ -15,6 +15,7 @@ struct proc *initproc;
 int nextpid = 1;
 struct spinlock pid_lock;
 
+
 extern void forkret(void);
 static void wakeup1(struct proc *chan);
 static void freeproc(struct proc *p);
@@ -28,9 +29,10 @@ procinit(void)
   struct proc *p;
   
   initlock(&pid_lock, "nextpid");
+  
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
-
+      
       // Allocate a page for the process's kernel stack.
       // Map it high in memory, followed by an invalid
       // guard page.
@@ -102,6 +104,7 @@ allocproc(void)
       release(&p->lock);
     }
   }
+
   return 0;
 
 found:
@@ -635,6 +638,11 @@ kill(int pid)
   return -1;
 }
 
+int trace(int mask){
+  myproc()->mask = mask;
+  return 0;
+}
+
 // Copy to either a user address, or kernel address,
 // depending on usr_dst.
 // Returns 0 on success, -1 on error.
@@ -694,9 +702,3 @@ procdump(void)
   }
 }
 
-
-int
-trace(int mask){
-  
-  return 0;
-}
