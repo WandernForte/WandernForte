@@ -108,5 +108,6 @@ sys_trace(void)
 }
 uint64
 sys_sysinfo(void){
+  printf("test words\n");
   return 0;
 }
