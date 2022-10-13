@@ -1,14 +1,16 @@
 /* $begin sbufc */
-#include "csapp.h"
-#include "sbuf.h"
+#include "../include/csapp.h"
+#include "./sbuf.h"
 
 /* Create an empty, bounded, shared FIFO buffer with n slots */
 /* $begin sbuf_init */
 void sbuf_init(sbuf_t *sp, int n)
-{
-    sp->buf = Calloc(n, sizeof(int)); 
+{   
+    sp->buf = (int*)Calloc(n, sizeof(int)); //blocked here
+    // printf("runned\n");
     sp->n = n;                       /* Buffer holds max of n items */
     sp->front = sp->rear = 0;        /* Empty buffer iff front == rear */
+    
     Sem_init(&sp->mutex, 0, 1);      /* Binary semaphore for locking */
     Sem_init(&sp->slots, 0, n);      /* Initially, buf has n empty slots */
     Sem_init(&sp->items, 0, 0);      /* Initially, buf has zero data items */
@@ -27,9 +29,19 @@ void sbuf_deinit(sbuf_t *sp)
 /* $begin sbuf_insert */
 void sbuf_insert(sbuf_t *sp, int item)
 {
-    P(&sp->slots);                          /* Wait for available slot */
-    P(&sp->mutex);                          /* Lock the buffer */
+    
+                              /* Wait for available slot */
+    
+    P(&sp->slots); 
+    P(&sp->mutex);                  /* Lock the buffer */
     sp->buf[(++sp->rear)%(sp->n)] = item;   /* Insert the item */
+    //       printf("popped items:");
+    //       for(int t=0; t<5; t++) {
+    //     // pthread_join(thread[t], &status);
+        
+    //     printf("%d,",sp->buf[t]);
+    //   }
+    //   printf("\n");
     V(&sp->mutex);                          /* Unlock the buffer */
     V(&sp->items);                          /* Announce available item */
 }
@@ -42,7 +54,13 @@ int sbuf_remove(sbuf_t *sp)
     int item;
     P(&sp->items);                          /* Wait for available item */
     P(&sp->mutex);                          /* Lock the buffer */
-    item = sp->buf[(++sp->front)%(sp->n)];  /* Remove the item */
+    item = sp->buf[(++sp->front)%(sp->n)]; 
+    // printf("pushed items:"); /* Remove the item */
+    // for(int t=0; t<5; t++) {
+    //     // pthread_join(thread[t], &status);
+    //     printf("%d,",sp->buf[t]);
+    //   }
+    //   printf("\n");
     V(&sp->mutex);                          /* Unlock the buffer */
     V(&sp->slots);                          /* Announce available slot */
     return item;

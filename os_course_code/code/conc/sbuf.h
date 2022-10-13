@@ -1,7 +1,7 @@
 #ifndef __SBUF_H__
 #define __SBUF_H__
 
-#include "csapp.h"
+#include "../include/csapp.h"
 
 /* $begin sbuft */
 typedef struct {

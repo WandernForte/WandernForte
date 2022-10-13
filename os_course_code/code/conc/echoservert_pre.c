@@ -2,8 +2,8 @@
  * echoservert_pre.c - A prethreaded concurrent echo server
  */
 /* $begin echoservertpremain */
-#include "csapp.h"
-#include "sbuf.h"
+#include "../include/csapp.h"
+#include "../conc/sbuf.h"
 #define NTHREADS  4
 #define SBUFSIZE  16
 

@@ -3,7 +3,7 @@
  * of bytes received from clients.
  */
 /* $begin echo_cnt */
-#include "csapp.h"
+#include "../include/csapp.h"
 
 static int byte_cnt;  /* byte counter */
 static sem_t mutex;   /* and the mutex that protects it */
