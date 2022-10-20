@@ -68,20 +68,17 @@ pipeclose(struct pipe *pi, int writable)
   }
   if(pi->readopen == 0 && pi->writeopen == 0){
     release(&pi->lock);
+#ifdef LAB_LOCK
+    freelock(&pi->lock);
+#endif    
     kfree((char*)pi);
   } else
     release(&pi->lock);
 }
 
 int
-pipewrite(struct pipe *pi, uint64 addr, int n)//write bytes via pipe
+pipewrite(struct pipe *pi, uint64 addr, int n)
 {
-  /**
-   * @brief 
-   * @param pi pipe for write
-   * @param addr unclear, start addr of void* ?
-   * @param n  length of void*
-   */
   int i;
   char ch;
   struct proc *pr = myproc();
