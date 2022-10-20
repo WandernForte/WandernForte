@@ -5,8 +5,6 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
-#include "sysinfo.h"
-// #include "kalloc.c"
 
 struct cpu cpus[NCPU];
 
@@ -16,7 +14,6 @@ struct proc *initproc;
 
 int nextpid = 1;
 struct spinlock pid_lock;
-
 
 extern void forkret(void);
 static void wakeup1(struct proc *chan);
@@ -31,10 +28,9 @@ procinit(void)
   struct proc *p;
   
   initlock(&pid_lock, "nextpid");
-  
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
-      
+
       // Allocate a page for the process's kernel stack.
       // Map it high in memory, followed by an invalid
       // guard page.
@@ -106,7 +102,6 @@ allocproc(void)
       release(&p->lock);
     }
   }
-
   return 0;
 
 found:
@@ -279,7 +274,7 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
-  np->mask = p->mask;
+
   np->parent = p;
 
   // copy saved user registers.
@@ -469,9 +464,12 @@ scheduler(void)
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
     
-    int found = 0;
+    int nproc = 0;
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
+      if(p->state != UNUSED) {
+        nproc++;
+      }
       if(p->state == RUNNABLE) {
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
@@ -483,12 +481,10 @@ scheduler(void)
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
-
-        found = 1;
       }
       release(&p->lock);
     }
-    if(found == 0) {
+    if(nproc <= 2) {   // only init and sh exist
       intr_on();
       asm volatile("wfi");
     }
@@ -640,13 +636,6 @@ kill(int pid)
   return -1;
 }
 
-int trace(int mask){
-  myproc()->mask = mask;
-  return 0;
-}
-
-
-
 // Copy to either a user address, or kernel address,
 // depending on usr_dst.
 // Returns 0 on success, -1 on error.
@@ -704,47 +693,4 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
-}
-
-int 
-num_freeproc(){
-  int result=0;
-  struct proc *p;
-
-  for(p = proc; p < &proc[NPROC]; p++){
-    acquire(&p->lock);
-    if(p->state==UNUSED){
-      result++;
-    }
-    release(&p->lock);
-  }
-  return result;
-}
-
-uint64 
-num_free_ofile(){
-  struct proc *p = myproc();
-  int result=0;
-
-  for(int fd = 0; fd < NOFILE; fd++){
-    if(!p->ofile[fd]){
-      result++;
-    }
-  }
-  return result;
-}
-
-int sysinfo(struct sysinfo* info){
-    uint64 addr;
-    if(argaddr(0,&addr)<0)
-    {
-      exit(-1);
-    }
-    struct proc* p = myproc();
-    info->freemem = cal_free_mem();
-    info->freefd = num_free_ofile();
-    info->nproc = num_freeproc();
-    if(copyout(p->pagetable, addr, (char *)info, sizeof(*info)) < 0)
-      return -1;
-    return 0;
 }

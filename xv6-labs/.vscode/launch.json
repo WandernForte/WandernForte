@@ -2,17 +2,16 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "gdb",
-            "request": "attach",
-            "name": "Attach to gdbserver",
-            "executable": "${workspaceRoot}/kernel/kernel",
-            "gdbpath": "gdb-multiarch",
-            "remote": true,            
-            "target": "127.0.0.1:26000",
-            "cwd": "${workspaceRoot}",
-            "setupCommands": {
-                "text": "source ${workspaceFolder}/.gdbinit"
-            }
+            "name": "xv6debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/kernel/kernel",
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "miDebuggerServerAddress": "127.0.0.1:26000", //见.gdbinit 中 target remote xxxx:xx
+            "miDebuggerPath": "gdb-multiarch", // which gdb-multiarch
+            "MIMode": "gdb",
+            "preLaunchTask": "xv6build"
         }
     ]
 }

@@ -167,7 +167,7 @@ clockintr()
   wakeup(&ticks);
   release(&tickslock);
 }
-
+// 
 // check if it's an external interrupt or software interrupt,
 // and handle it.
 // returns 2 if timer interrupt,

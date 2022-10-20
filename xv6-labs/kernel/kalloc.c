@@ -18,16 +18,24 @@ struct run {
   struct run *next;
 };
 
-struct {
+struct kmem_{
   struct spinlock lock;
   struct run *freelist;
-} kmem;
-
+};
+struct kmem_ kmem[NCPU];
 void
 kinit()
-{
-  initlock(&kmem.lock, "kmem");
+{ 
+  // push_off();
+  // int id = cpuid();
+  // pop_off();
+  for(int id=0;id<NCPU;id++){
+  char kmemName[5] = "kmem";
+  kmemName[4] = (char)(id+'0');
+  initlock(&(kmem[id]).lock, kmemName);
   freerange(end, (void*)PHYSTOP);
+  // printf("create %s\n", kmemName);
+  }
 }
 
 void
@@ -47,7 +55,9 @@ void
 kfree(void *pa)
 {
   struct run *r;
-
+  push_off();
+  int id = cpuid();
+  pop_off();
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
 
@@ -56,10 +66,10 @@ kfree(void *pa)
 
   r = (struct run*)pa;
 
-  acquire(&kmem.lock);
-  r->next = kmem.freelist;
-  kmem.freelist = r;
-  release(&kmem.lock);
+  acquire(&(kmem[id]).lock);
+  r->next = kmem[id].freelist;
+  kmem[id].freelist = r;
+  release(&(kmem[id]).lock);
 }
 
 // Allocate one 4096-byte page of physical memory.
@@ -69,32 +79,28 @@ void *
 kalloc(void)
 {
   struct run *r;
-
-  acquire(&kmem.lock);
-  r = kmem.freelist;
+  push_off();
+  int id = cpuid();
+  pop_off();
+  acquire(&(kmem[id]).lock);
+  r = kmem[id].freelist;
   if(r)
-    kmem.freelist = r->next;
-  release(&kmem.lock);
+    kmem[id].freelist = r->next;
+  else
+    for(int idx=0;idx<NCPU;idx++){
+      if(idx==id) continue;
+      acquire(&(kmem[idx]).lock);
+      if(kmem[idx].freelist){
+        r = kmem[idx].freelist;
+        kmem[id].freelist=r->next;
+        release(&(kmem[idx]).lock);
+        break;
+      }
+      release(&(kmem[idx]).lock);
+    }
+  release(&(kmem[id]).lock);
 
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
-}
-//TODO calculate free memory
-uint64 
-cal_free_mem(){
-  struct run*r;
-  int free_mem=0; 
-  acquire(&kmem.lock);
-  r = kmem.freelist;
-  if(!r){
-    release(&kmem.lock);
-    return 0;
-  }
-  while(r){
-    ++free_mem;
-    r = r->next;
-  }
-  release(&kmem.lock);
-  return free_mem*PGSIZE;
 }
