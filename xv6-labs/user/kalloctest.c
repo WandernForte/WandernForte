@@ -80,11 +80,14 @@ void test1(void)
 int
 countfree()
 {
+  // printf("runned1\n");
   uint64 sz0 = (uint64)sbrk(0);
   int n = 0;
-
+  // printf("runned2\n");
   while(1){
     uint64 a = (uint64) sbrk(4096);
+    // dead loop here
+    printf("a=%x\n", a);
     if(a == 0xffffffffffffffff){
       break;
     }
