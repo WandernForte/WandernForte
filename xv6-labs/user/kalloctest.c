@@ -87,7 +87,7 @@ countfree()
   while(1){
     uint64 a = (uint64) sbrk(4096);
     // dead loop here
-    printf("a=%x\n", a);
+    // printf("a=%x\n", a);
     if(a == 0xffffffffffffffff){
       break;
     }
