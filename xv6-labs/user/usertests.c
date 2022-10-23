@@ -1752,6 +1752,7 @@ manywrites(char *s)
       
       for(int iters = 0; iters < howmany; iters++){
         for(int i = 0; i < ci+1; i++){
+          // printf("%s: creating %s\n", s, name);
           int fd = open(name, O_CREATE | O_RDWR);
           if(fd < 0){
             printf("%s: cannot create %s\n", s, name);
@@ -1772,10 +1773,11 @@ manywrites(char *s)
       exit(0);
     }
   }
-
+    // printf("runned\n");
   for(int ci = 0; ci < nchildren; ci++){
     int st = 0;
     wait(&st);
+    // printf("runned\n");
     if(st != 0)
       exit(st);
   }
