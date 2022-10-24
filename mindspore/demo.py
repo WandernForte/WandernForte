@@ -1,0 +1,1 @@
+from mindvision.dataset import Minist
