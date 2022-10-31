@@ -95,8 +95,8 @@ kalloc(void)
     release(&(kmem[id]).lock);
   // else
   if(!r)
-    for(int idx=0;idx<NCPU;idx++){
-      if(idx==id||holding(&(kmem[idx]).lock)) continue;// if the lock was hold by other cpu, skip
+    for(int idx=id+1;idx!=id;idx=(idx+1)%NCPU){
+      if(holding(&(kmem[idx]).lock)) continue;// if the lock was hold by other cpu, skip
       acquire(&(kmem[idx]).lock);
       if(kmem[idx].freelist){
         

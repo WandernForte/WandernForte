@@ -34,6 +34,7 @@ struct
 } bcache;
 
 int map(int blockno){
+  // random one to one cycle mapping
   return blockno%NBUCKETS;
 }
 
@@ -102,7 +103,7 @@ bget(uint dev, uint blockno)
       return b;
     }
   }
-  // 当bget()查找数据块未命中时，bget()可从其他哈希桶选择一个未被使用的缓存块，移入到当前的哈希桶链表中使用。
+  // 当bget()查找数据块未命中时，bget()可从其他哈希桶选择一个未被使用的缓存块，移入到当前的哈希桶链表中使用。 from instruction book
   for (int bkid = map(blockno+1); bkid != bid; bkid=map(bkid+1))
   {
     acquire(&bcache.lock[bkid]);
