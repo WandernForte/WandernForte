@@ -1,7 +1,6 @@
-#include"kernel/types.h"
-
 struct stat;
 struct rtcdate;
+struct sysinfo;
 
 // system calls
 int fork(void);
@@ -23,10 +22,13 @@ int chdir(const char*);
 int dup(int);
 int getpid(void);
 char* sbrk(int);
-
 int sleep(int);
-
 int uptime(void);
+int checkvm(void);
+
+#ifdef LAB_NET
+int connect(uint32, uint16, uint16);
+#endif
 
 // ulib.c
 int stat(const char*, struct stat*);
@@ -44,3 +46,4 @@ void free(void*);
 int atoi(const char*);
 int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
+int statistics(void*, int);
