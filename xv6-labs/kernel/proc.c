@@ -30,16 +30,20 @@ procinit(void)
   initlock(&pid_lock, "nextpid");
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
-
+      
       // Allocate a page for the process's kernel stack.
       // Map it high in memory, followed by an invalid
       // guard page.
+      // kvminit_proc();
       char *pa = kalloc();
       if(pa == 0)
         panic("kalloc");
       uint64 va = KSTACK((int) (p - proc));
       kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
       p->kstack = va;
+      p->kstack_pa = (uint64)pa;
+      
+      
   }
   kvminithart();
 }
@@ -95,8 +99,13 @@ allocproc(void)
   struct proc *p;
 
   for(p = proc; p < &proc[NPROC]; p++) {
+    
     acquire(&p->lock);
     if(p->state == UNUSED) {
+          // CLINT
+      // printf("runned\n");
+      p->kpagetable=kvminit_proc();
+      kvmmap_proc(p->kpagetable, p->kstack, p->kstack_pa, PGSIZE, PTE_R | PTE_W);
       goto found;
     } else {
       release(&p->lock);
@@ -106,7 +115,6 @@ allocproc(void)
 
 found:
   p->pid = allocpid();
-
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     release(&p->lock);
@@ -130,6 +138,19 @@ found:
   return p;
 }
 
+void kvmfree(pagetable_t pagetable){
+      for(int i = 0; i < 512; i++){
+      pte_t pte = pagetable[i];
+      if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
+      // this PTE points to a lower-level page table.
+        uint64 child = PTE2PA(pte);
+        kvmfree((pagetable_t)child);
+        pagetable[i] = 0; 
+         }
+  }
+  kfree((void*)pagetable);
+}
+
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.
@@ -141,6 +162,9 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  if(p->kpagetable){
+    kvmfree(p->kpagetable);
+    }
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -151,6 +175,7 @@ freeproc(struct proc *p)
   p->xstate = 0;
   p->state = UNUSED;
 }
+
 
 // Create a user page table for a given process,
 // with no user memory, but with trampoline pages.
@@ -473,16 +498,19 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        w_satp(MAKE_SATP(p->kpagetable));
+        sfence_vma();
         swtch(&c->context, &p->context);
-
         // Process is done running for now.
         // It should have changed its p->state before coming back.
+        
         c->proc = 0; // cpu dosen't run any process now
-
         found = 1;
       }
+
       release(&p->lock);
     }
+      kvminithart();// no process running change to default pagetable
 #if !defined (LAB_FS)
     if(found == 0) {
       intr_on();

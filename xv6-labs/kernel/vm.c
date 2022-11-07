@@ -2,9 +2,11 @@
 #include "types.h"
 #include "memlayout.h"
 #include "elf.h"
+#include "spinlock.h"
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -45,6 +47,37 @@ kvminit()
   // map the trampoline for trap entry/exit to
   // the highest virtual address in the kernel.
   kvmmap(TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+}
+
+pagetable_t kvminit_proc(){
+  pagetable_t k_pagetable = (pagetable_t)kalloc();
+  // uint64 va = myproc()->kstack;
+  // uint64 pa = myproc()->kstack_pa;
+  memset(k_pagetable, 0, PGSIZE);
+
+  // uart registers
+  kvmmap_proc(k_pagetable, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+
+  // virtio mmio disk interface
+  kvmmap_proc(k_pagetable, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+
+  // CLINT
+  // kvmmap(CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+
+  // PLIC
+  kvmmap_proc(k_pagetable, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+
+  // map kernel text executable and read-only.
+  kvmmap_proc(k_pagetable, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+
+  // map kernel data and the physical RAM we'll make use of.
+  kvmmap_proc(k_pagetable, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+
+  // map the trampoline for trap entry/exit to
+  // the highest virtual address in the kernel.
+  kvmmap_proc(k_pagetable, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+  // release(&p->lock);
+  return k_pagetable;
 }
 
 // Switch h/w page table register to the kernel's page table,
@@ -114,10 +147,25 @@ walkaddr(pagetable_t pagetable, uint64 va)
 // add a mapping to the kernel page table.
 // only used when booting.
 // does not flush TLB or enable paging.
+/**
+ * @brief 
+ * 
+ * @param va virtual address 
+ * @param pa physical address
+ * @param sz size
+ * @param perm permission
+ */
 void
 kvmmap(uint64 va, uint64 pa, uint64 sz, int perm)
 {
   if(mappages(kernel_pagetable, va, sz, pa, perm) != 0)
+    panic("kvmmap");
+}
+
+void
+kvmmap_proc(pagetable_t kpagetable, uint64 va, uint64 pa, uint64 sz, int perm)
+{   
+  if(mappages(kpagetable, va, sz, pa, perm) != 0)
     panic("kvmmap");
 }
 
@@ -349,6 +397,30 @@ uvmclear(pagetable_t pagetable, uint64 va)
     panic("uvmclear");
   *pte &= ~PTE_U;
 }
+/**
+ * @brief map user page table into kernel page table
+ * @ref  内核页表直接共享用户页表的叶子页表，即内核页表中次页表的部分目录项直接指向用户页表的叶子页表。
+ * 这样可以不必将用户页表的页表项全部复制进内核页表，也不必修改页表项标志位，
+ * 简化实现的同时也可以提升性能，但在页表回收的时候需要避免重复回收。
+ */
+void
+upgtbl2kpgtbl(struct proc* p){
+    for(int i = 0; i < 512; i++){
+    pte_t pte = p->pagetable[i];
+    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
+      // this PTE points to a lower-level page table.
+      uint64 child = PTE2PA(pte);
+      // freewalk((pagetable_t)child);
+      for(int j=0; j<512;j++){
+        pte_t kpte = p->kpagetable[j];
+        if(!kpte&PTE_V){// unused pagetable
+          kpte = pte;
+        }
+      } 
+    }
+  }
+}
+
 
 // Copy from kernel to user.
 // Copy len bytes from src to virtual address dstva in a given page table.
@@ -385,7 +457,7 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 
   while(len > 0){
     va0 = PGROUNDDOWN(srcva);
-    pa0 = walkaddr(pagetable, va0);
+    pa0 = walkaddr(pagetable, va0);//
     if(pa0 == 0)
       return -1;
     n = PGSIZE - (srcva - va0);
@@ -399,7 +471,26 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
   }
   return 0;
 }
+// int copyin_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
+// {
+//   uint64 n, va0, pa0;
 
+//   while(len > 0){
+//     va0 = PGROUNDDOWN(srcva);
+//     pa0 = walkaddr(pagetable, va0);
+//     if(pa0 == 0)
+//       return -1;
+//     n = PGSIZE - (srcva - va0);
+//     if(n > len)
+//       n = len;
+//     memmove(dst, (void *)(pa0 + (srcva - va0)), n);
+
+//     len -= n;
+//     dst += n;
+//     srcva = va0 + PGSIZE;
+//   }
+//   return 0;
+// }
 // Copy a null-terminated string from user to kernel.
 // Copy bytes to dst from virtual address srcva in a given page table,
 // until a '\0', or max.
@@ -442,6 +533,45 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+// int
+// copyinstr_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
+// {
+//   uint64 n, va0, pa0;
+//   int got_null = 0;
+
+//   while(got_null == 0 && max > 0){
+//     va0 = PGROUNDDOWN(srcva);
+//     pa0 = walkaddr(pagetable, va0);
+//     if(pa0 == 0)
+//       return -1;
+//     n = PGSIZE - (srcva - va0);
+//     if(n > max)
+//       n = max;
+
+//     char *p = (char *) (pa0 + (srcva - va0));
+//     while(n > 0){
+//       if(*p == '\0'){
+//         *dst = '\0';
+//         got_null = 1;
+//         break;
+//       } else {
+//         *dst = *p;
+//       }
+//       --n;
+//       --max;
+//       p++;
+//       dst++;
+//     }
+
+//     srcva = va0 + PGSIZE;
+//   }
+//   if(got_null){
+//     return 0;
+//   } else {
+//     return -1;
+//   }
+// }
 
 // check if use global kpgtbl or not 
 int 
