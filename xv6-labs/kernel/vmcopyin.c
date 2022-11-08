@@ -29,12 +29,14 @@ statscopyin(char *buf, int sz) {
 int
 copyin_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
+  w_sstatus(r_sstatus() | SSTATUS_SPP);
   struct proc *p = myproc();
 
   if (srcva >= p->sz || srcva+len >= p->sz || srcva+len < srcva)
     return -1;
   memmove((void *) dst, (void *)srcva, len);
   stats.ncopyin++;   // XXX lock
+  w_sstatus(r_sstatus() & ~SSTATUS_SPP);
   return 0;
 }
 
@@ -45,6 +47,7 @@ copyin_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 int
 copyinstr_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
+  w_sstatus(r_sstatus() | SSTATUS_SPP);
   struct proc *p = myproc();
   char *s = (char *) srcva;
   
@@ -54,5 +57,6 @@ copyinstr_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     if(s[i] == '\0')
       return 0;
   }
+  w_sstatus(r_sstatus() & ~SSTATUS_SPP);
   return -1;
 }

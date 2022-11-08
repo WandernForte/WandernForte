@@ -189,6 +189,8 @@ kvmpa(uint64 va)
   return pa+off;
 }
 
+
+
 // Create PTEs for virtual addresses starting at va that refer to
 // physical addresses starting at pa. va and size might not
 // be page-aligned. Returns 0 on success, -1 if walk() couldn't
@@ -318,7 +320,19 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 
   return newsz;
 }
+uint64
+kvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
+{
+  if(newsz >= oldsz)
+    return oldsz;
 
+  if(PGROUNDUP(newsz) < PGROUNDUP(oldsz)){
+    int npages = (PGROUNDUP(oldsz) - PGROUNDUP(newsz)) / PGSIZE;
+    uvmunmap(pagetable, PGROUNDUP(newsz), npages, 0);// no free
+  }
+
+  return newsz;
+}
 // Recursively free page-table pages.
 // All leaf mappings must already have been removed.
 void
@@ -403,22 +417,30 @@ uvmclear(pagetable_t pagetable, uint64 va)
  * 这样可以不必将用户页表的页表项全部复制进内核页表，也不必修改页表项标志位，
  * 简化实现的同时也可以提升性能，但在页表回收的时候需要避免重复回收。
  */
-void
-upgtbl2kpgtbl(struct proc* p){
-    for(int i = 0; i < 512; i++){
-    pte_t pte = p->pagetable[i];
-    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
-      // this PTE points to a lower-level page table.
-      uint64 child = PTE2PA(pte);
-      // freewalk((pagetable_t)child);
-      for(int j=0; j<512;j++){
-        pte_t kpte = p->kpagetable[j];
-        if(!kpte&PTE_V){// unused pagetable
-          kpte = pte;
+int
+upgtbl2kpgtbl(pagetable_t upgtbl, pagetable_t kpgtbl, uint64 st, uint64 len){
+    pte_t *pte;
+    uint64 pa, i;
+    uint flags;
+
+    if (len > PLIC) return -1;
+
+    st = PGROUNDUP(st);
+
+    for(i = st; i < len; i += PGSIZE) {
+        if((pte = walk(upgtbl, i, 0)) == 0)
+            panic("kvmcopy: pte should exist");
+        if((*pte & PTE_V) == 0)
+            panic("kvmcopy: page not present");
+        pa = PTE2PA(*pte);
+        flags = PTE_FLAGS(*pte) & (~PTE_U);
+        if(mappages(kpgtbl, i, PGSIZE, (uint64)pa, flags) != 0){
+            uvmunmap(upgtbl, 0, i / PGSIZE, 0);
+            return -1;
         }
-      } 
     }
-  }
+    return 0;
+    
 }
 
 
@@ -456,8 +478,8 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
   uint64 n, va0, pa0;
 
   while(len > 0){
-    va0 = PGROUNDDOWN(srcva);
-    pa0 = walkaddr(pagetable, va0);//
+    va0 = PGROUNDDOWN(srcva);//reserved 
+    pa0 = walkaddr(pagetable, va0);// modify
     if(pa0 == 0)
       return -1;
     n = PGSIZE - (srcva - va0);
@@ -471,26 +493,7 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
   }
   return 0;
 }
-// int copyin_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
-// {
-//   uint64 n, va0, pa0;
 
-//   while(len > 0){
-//     va0 = PGROUNDDOWN(srcva);
-//     pa0 = walkaddr(pagetable, va0);
-//     if(pa0 == 0)
-//       return -1;
-//     n = PGSIZE - (srcva - va0);
-//     if(n > len)
-//       n = len;
-//     memmove(dst, (void *)(pa0 + (srcva - va0)), n);
-
-//     len -= n;
-//     dst += n;
-//     srcva = va0 + PGSIZE;
-//   }
-//   return 0;
-// }
 // Copy a null-terminated string from user to kernel.
 // Copy bytes to dst from virtual address srcva in a given page table,
 // until a '\0', or max.
@@ -534,44 +537,6 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   }
 }
 
-// int
-// copyinstr_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
-// {
-//   uint64 n, va0, pa0;
-//   int got_null = 0;
-
-//   while(got_null == 0 && max > 0){
-//     va0 = PGROUNDDOWN(srcva);
-//     pa0 = walkaddr(pagetable, va0);
-//     if(pa0 == 0)
-//       return -1;
-//     n = PGSIZE - (srcva - va0);
-//     if(n > max)
-//       n = max;
-
-//     char *p = (char *) (pa0 + (srcva - va0));
-//     while(n > 0){
-//       if(*p == '\0'){
-//         *dst = '\0';
-//         got_null = 1;
-//         break;
-//       } else {
-//         *dst = *p;
-//       }
-//       --n;
-//       --max;
-//       p++;
-//       dst++;
-//     }
-
-//     srcva = va0 + PGSIZE;
-//   }
-//   if(got_null){
-//     return 0;
-//   } else {
-//     return -1;
-//   }
-// }
 
 // check if use global kpgtbl or not 
 int 
