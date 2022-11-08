@@ -1,61 +1,46 @@
-from typing import Any
-
-import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torch import device
-from torchvision import datasets, transforms
+from IPython import display
+from matplotlib import pyplot as plt
+import numpy as np
+import random
+from datasets.linear_reg import data_iter
+from machinelearning.tools.linreg import linreg, square_loss, sgd
 
-import d2lzh_pytorch
-from mlp.utils import xyplot
-from tools import train
+num_inputs = 2
+num_examples = 1000
+true_w = [2, -3.4]
+# test = torch.from_numpy(np.random.normal(0, 1, (5, 5)))
+true_b = 4.2
+features = torch.from_numpy(np.random.normal(0, 1, (num_examples, num_inputs))).type(torch.float32)
+
+# print(test)
+# print(test[0, :]) # 相当于第0列
+labels = true_w[0] * features[:, 0] + true_w[1] * features[:, 1] + true_b
+labels += torch.from_numpy(np.random.normal(0, 0.01, size=labels.size()))
+
+batch_size = 10
+
+# for X, y in data_iter(batch_size, features, labels, in_order=True):
+#     print(X, y)
+#     break
+
+w = torch.tensor(np.random.normal(0, 0.01, (num_inputs, 1)), dtype=torch.float32)
+b = torch.zeros(1, dtype=torch.float32)
+w.requires_grad_(requires_grad=True)
+b.requires_grad_(requires_grad=True)
 
 
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(24, 48, kernel_size=1)
-        self.conv2 = nn.Conv2d(48, 24, kernel_size=1)
-        self.drop = nn.Dropout2d()
-        self.fc1 = nn.Linear(128, 64)
-        self.fc2 = nn.Linear(64, 16)
-
-    def forward(self, x):
-        x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        x = F.relu(F.max_pool2d(self.drop(self.conv2(x)), 2))
-        x = x.view(-1, 128)
-        x = F.relu(self.fc1(x))
-        x = F.dropout(x, training=self.training)
-        x = self.fc2(x)
-        return F.log_softmax(x, dim=1)
-
-
-model = Net().to("cpu")
-batch_size = 256
-# train_iter, test_iter = d2lzh_pytorch.load_data_fashion_mnist(batch_size)
-# x = torch.arange(-8.0, 8.0, 0.1, requires_grad=True)
-# y = x.relu()
-# xyplot(x, y, 'relu')
-# num_inputs, num_outputs, num_hiddens = 784, 10, 256
-# W1 = torch.tensor(np.random.normal(0, 0.01, (num_inputs, num_hiddens)), dtype=torch.float)
-# b1 = torch.zeros(num_hiddens, dtype=torch.float)
-# W2 = torch.tensor(np.random.normal(0, 0.01, (num_hiddens, num_outputs)), dtype=torch.float)
-# b2 = torch.zeros(num_outputs, dtype=torch.float)
-device = torch.device('cpu')
-kwargs = {}
-optimizer = torch.optim.SGD(model.parameters(), lr=0.5)
-train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST('../data', train=True, download=True,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])), batch_size=batch_size, shuffle=True, **kwargs)
-train(batch_size=batch_size, model=model, device=device,
-      train_loader=train_loader, optimizer=optimizer, loss_func=torch.nn.CrossEntropyLoss(), epoch=10)
-# params = [W1, b1, W2, b2]
-#
-# for param in params:
-#     param.requires_grad_(requires_grad=True)
-
+lr = 5e-2
+# 迭代周期数
+num_epochs = 3
+net = linreg
+loss = square_loss
+for epoch in range(num_epochs):
+    for(X, y) in data_iter(batch_size, features, labels):
+        l = loss(net(X, w, b), y).sum()
+        l.backward()
+        sgd([w, b], lr, batch_size)
+        w.grad.data.zero_()
+        b.grad.data.zero_()
+    train_l = loss(net(features, w, b), labels)
+    print("epoch:{}, loss:{}".format(epoch+1, train_l.mean().item()))
