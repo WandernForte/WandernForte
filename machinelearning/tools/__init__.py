@@ -2,3 +2,4 @@
 from .draw import *
 from .train import *
 from .test import *
+from .LinearNet import *
