@@ -295,7 +295,7 @@ class Animator:
         # Incrementally plot multiple lines
         if legend is None:
             legend = []
-        d2l.use_svg_display()
+        # d2l.use_svg_display()
         self.fig, self.axes = d2l.plt.subplots(nrows, ncols, figsize=figsize)
         if nrows * ncols == 1:
             self.axes = [self.axes, ]
